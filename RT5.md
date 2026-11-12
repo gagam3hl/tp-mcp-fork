@@ -17,7 +17,8 @@ plus ausgewählte, noch nicht gemergte PRs.
 | #168 | neues Werkzeug `tp_complete_workout` (erledigt ohne Gerätedatei) |
 | #165 | Zeitreihe von `tp_analyze_workout` in voller Auflösung (abschnittsweise nachgeladen) |
 
-Eigene Erweiterungen: Block `pedaling` in `tp_analyze_workout` (Balance, Drehmomenteffektivität,
+Eigene Erweiterungen: Block `heat` in `tp_analyze_workout` und Werkzeug `tp_get_heat_sessions`
+(CORE-Sensor: Kern-/Hauttemperatur, Heat Strain Index, CORE Heat Zones); Block `pedaling` in `tp_analyze_workout` (Balance, Drehmomenteffektivität,
 Tretrundheit, Balance je Wattbereich und je Viertel) statt #185, das nicht übernommen wird;
 `TP_MCP_NO_ANALYSIS_FILE=1` gegen große Zeitreihen-Dateien.
 
