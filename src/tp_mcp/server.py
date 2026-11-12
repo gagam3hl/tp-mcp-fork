@@ -63,6 +63,7 @@ from tp_mcp.tools import (
     tp_get_events,
     tp_get_fitness,
     tp_get_focus_event,
+    tp_get_heat_sessions,
     tp_get_libraries,
     tp_get_library_item,
     tp_get_library_items,
@@ -614,7 +615,9 @@ TOOLS = [
             "startTimestamp_local/stopTimestamp_local alongside them. With a dual-sided power meter "
             "the result has a 'pedaling' block: power-weighted left/right balance, torque "
             "effectiveness and pedal smoothness over pedaling samples, balance by 50 W power range "
-            "and per quarter of the ride (fatigue drift)."
+            "and per quarter of the ride (fatigue drift). With a CORE body-temperature sensor it has "
+            "a 'heat' block: core/skin temperature, Heat Strain Index with minutes per CORE Heat Zone, "
+            "minutes to Zone 3, ambient temperature and per-quarter core/HSI/HR/power."
         ),
         input_schema={
             "type": "object",
@@ -654,6 +657,26 @@ TOOLS = [
                 },
             },
             "required": [],
+        },
+    ),
+    Tool(
+        name="tp_get_heat_sessions",
+        description=(
+            "Heat-training sessions in a date range (max 90 days): one compact row per completed workout "
+            "with CORE body-temperature sensor data - core temperature start/avg/max/rise, minutes at "
+            "or above 38.5 C, Heat Strain Index avg/max, minutes per CORE Heat Zone (HSI: 1 = 0-0.9, "
+            "2 = 1-2.9, 3 = 3-6.9 heat training zone, 4 = 7+ avoid), minutes to Zone 3, skin temperature, "
+            "core-skin gradient, ambient temperature, avg HR, NP - plus totals. Use it for heat-adaptation "
+            "trends across weeks; tp_analyze_workout has the full 'heat' block for one session. Checks up "
+            "to 40 workouts per call; if truncated, call again from next_start_date."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "start_date": {"type": "string", "description": "Start date (YYYY-MM-DD)."},
+                "end_date": {"type": "string", "description": "End date (YYYY-MM-DD), max 90 days after start."},
+            },
+            "required": ["start_date", "end_date"],
         },
     ),
     Tool(
@@ -1912,6 +1935,10 @@ async def _h_get_fitness(args):
 
 @_handler("tp_get_weekly_summary")
 async def _h_weekly_summary(args): return await tp_get_weekly_summary(week_of=args.get("week_of"))
+
+@_handler("tp_get_heat_sessions")
+async def _h_get_heat_sessions(args):
+    return await tp_get_heat_sessions(start_date=args["start_date"], end_date=args["end_date"])
 
 @_handler("tp_get_atp")
 async def _h_get_atp(args): return await tp_get_atp(start_date=args["start_date"], end_date=args["end_date"])

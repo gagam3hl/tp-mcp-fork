@@ -42,6 +42,7 @@ from pydantic import ValidationError
 from tp_mcp.client import TPClient, parse_workout_analysis
 from tp_mcp.tools._time import resolve_timezone, utc_to_local
 from tp_mcp.tools._validation import WorkoutIdInput, format_validation_error
+from tp_mcp.tools.heat import heat_summary
 from tp_mcp.tools.pedaling import pedaling_summary
 
 logger = logging.getLogger("tp-mcp")
@@ -250,8 +251,12 @@ def _stop_timestamp(start_iso: str | None, elapsed_seconds: Any) -> str | None:
     return (start_dt + timedelta(seconds=float(elapsed_seconds))).isoformat()
 
 
-async def tp_analyze_workout(workout_id: str, timezone: str | None = None) -> dict[str, Any]:
+async def tp_analyze_workout(workout_id: str, timezone: str | None = None, *, light: bool = False) -> dict[str, Any]:
     """Get detailed workout analysis including metrics, zones, and lap data.
+
+    ``light`` (internal, not in the tool schema; used by tp_get_heat_sessions):
+    keep the downsampled chart response, skip laps and the data file — one
+    summary and one charts request per workout.
 
     Full time-series data is saved to a JSON file for further analysis.
 
@@ -331,12 +336,12 @@ async def tp_analyze_workout(workout_id: str, timezone: str | None = None) -> di
                     return charts_err
 
             charts_rows = (charts or {}).get("data") or []
-            if charts_rows:
+            if charts_rows and not light:
                 charts_rows = await _refetch_full_resolution(
                     http_client, headers, wid, charts_rows
                 )
 
-            laps, laps_err = await _post_analysis(http_client, _LAPS_PATH, headers, wid)
+            laps, laps_err = (None, None) if light else await _post_analysis(http_client, _LAPS_PATH, headers, wid)
             if laps_err:
                 if laps_err.get("error_code") == "NOT_FOUND":
                     logger.info("workout %s: no lap data available", wid)
@@ -406,7 +411,7 @@ async def tp_analyze_workout(workout_id: str, timezone: str | None = None) -> di
     # Save full raw data (including time-series) to file. rt5: TP_MCP_NO_ANALYSIS_FILE=1
     # skips it — on a hosted server nobody reads the file, and at 1 s resolution
     # (#165) a long ride is ~18 MB in a size-limited tmpfs.
-    skip_file = os.environ.get("TP_MCP_NO_ANALYSIS_FILE") == "1"
+    skip_file = light or os.environ.get("TP_MCP_NO_ANALYSIS_FILE") == "1"
     data_file = None if skip_file else _save_analysis_json(wid, raw_data)
 
     # Return summary inline, point to file for full data
@@ -452,4 +457,8 @@ async def tp_analyze_workout(workout_id: str, timezone: str | None = None) -> di
     pedaling = pedaling_summary(time_series)
     if pedaling is not None:
         result["pedaling"] = pedaling
+    # rt5: Hitze-Kennzahlen aus einem CORE-Sensor (Kern-/Hauttemperatur, HSI)
+    heat = heat_summary(time_series)
+    if heat is not None:
+        result["heat"] = heat
     return result
