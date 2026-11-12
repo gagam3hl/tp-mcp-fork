@@ -253,8 +253,8 @@ def _file_count(raw: dict[str, Any]) -> int | None:
     return sum(len(raw.get(k) or []) for k in keys if isinstance(raw.get(k), list))
 
 
-def _compact_workout(w: Any, raw: dict[str, Any]) -> dict[str, Any]:
-    """One small row per workout: identity, numbers, and presence flags only."""
+def _compact_workout(w: Any, raw: dict[str, Any], compliance: dict[str, Any] | None = None) -> dict[str, Any]:
+    """One small row per workout: identity, numbers, compliance and presence flags only."""
     return {
         "id": str(w.id),
         "date": w.date.isoformat(),
@@ -270,6 +270,7 @@ def _compact_workout(w: Any, raw: dict[str, Any]) -> dict[str, Any]:
         "has_description": bool(w.description),
         "has_structure": bool(raw.get("structure")),
         "file_count": _file_count(raw),
+        "compliance": compliance,
     }
 
 
@@ -348,7 +349,10 @@ async def tp_get_workouts(
                     str(item.get("workoutId")): item for item in raw_items if isinstance(item, dict)
                 }
                 return {
-                    "workouts": [_compact_workout(w, raw_by_id.get(str(w.id), {})) for w in workouts],
+                    "workouts": [
+                        _compact_workout(w, raw_by_id.get(str(w.id), {}), _compliance(w, *prefs))
+                        for w in workouts
+                    ],
                     "count": len(workouts),
                     "date_range": {"start": start_date, "end": end_date},
                     "compact": True,
