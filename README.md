@@ -8,9 +8,7 @@
 > [#189](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/189) kompakte Ausgabe,
 > [#190](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/190) Zeitzonen.
 > `main` spiegelt das Original unverändert. Inhalt, eigene Anpassungen und Ablauf für
-> neue Stände: [RT5.md](RT5.md). Genutzt von
-> [gagam3hl/TrainingPeaks-MCP](https://github.com/gagam3hl/TrainingPeaks-MCP) (privat):
-> gehosteter Connector hinter Cloudflare Access, ein Prozess je TrainingPeaks-Konto.
+> neue Stände: [RT5.md](RT5.md).
 > Ab hier folgt die README des Originals; Installationsbefehle zeigen auf das Original —
 > für diesen Stand `git clone -b rt5 https://github.com/gagam3hl/tp-mcp-fork.git`.
 

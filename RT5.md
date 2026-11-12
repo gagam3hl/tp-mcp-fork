@@ -1,7 +1,7 @@
 # Branch `rt5`
 
 Stand des Originals [JamsusMaximus/trainingpeaks-mcp](https://github.com/JamsusMaximus/trainingpeaks-mcp)
-plus ausgewählte, noch nicht gemergte PRs — für [gagam3hl/TrainingPeaks-MCP](https://github.com/gagam3hl/TrainingPeaks-MCP).
+plus ausgewählte, noch nicht gemergte PRs.
 `main` bleibt ein unveränderter Spiegel des Originals.
 
 | PR | Inhalt |
@@ -17,6 +17,6 @@ Eigene Anpassungen: kompakte Zeilen tragen `compliance_color`/`_basis`/`_percent
 
 Jeder PR wurde vor dem Merge gelesen (keine neuen Netzwerkziele, Dateizugriffe
 oder Ausgaben von Tokens). Neue Stände des Originals: `main` synchronisieren,
-in `rt5` mergen, Tests (`pytest`), dann im Haupt-Repo den Commit in
-`app/requirements.txt` umstellen. Wird ein PR im Original gemergt, fällt er
+in `rt5` mergen, Tests (`pytest`), dann pushen; Nutzer stellen ihren festen
+Commit auf den neuen Stand um. Wird ein PR im Original gemergt, fällt er
 beim nächsten Merge von `main` von selbst heraus.
