@@ -6,12 +6,14 @@ per session with CORE sensor data. Each workout is analysed in light mode
 (downsampled charts, no laps, no file): two requests per workout.
 """
 
+from datetime import date
 from typing import Any
 
 from pydantic import ValidationError
 
 from tp_mcp.tools._validation import DateRangeInput, format_validation_error
 from tp_mcp.tools.analyze import tp_analyze_workout
+from tp_mcp.tools.heat import CORE_GUIDANCE, HTL_MAX
 from tp_mcp.tools.workouts import tp_get_workouts
 
 MAX_WORKOUTS = 40
@@ -41,6 +43,9 @@ def _session_row(workout: dict[str, Any], analysis: dict[str, Any], heat: dict[s
         "core_start_c": core["start"], "core_avg_c": core["avg"], "core_max_c": core["max"],
         "core_rise_c": core["rise"], "core_min_at_or_above_38_5": core["minutes_at_or_above"]["38.5"],
         "hsi_avg": hsi.get("avg"), "hsi_max": hsi.get("max"),
+        "htl_estimate": hsi.get("heat_training_load_estimate"),
+        "hsi_unusable_no_skin_temp": True if hsi.get("reliable") is False else None,
+        "core_min_at_or_above_38_0": core["minutes_at_or_above"]["38.0"],
         "zone_minutes": hsi.get("minutes_in_zone"), "minutes_to_zone3": hsi.get("minutes_to_zone3"),
         "skin_avg_c": (heat.get("skin_temp_c") or {}).get("avg"),
         "core_skin_gradient_c": (heat.get("skin_temp_c") or {}).get("core_skin_gradient_avg"),
@@ -49,10 +54,42 @@ def _session_row(workout: dict[str, Any], analysis: dict[str, Any], heat: dict[s
     return {k: v for k, v in row.items() if v is not None}
 
 
-def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    zone3 = [((r.get("zone_minutes") or {}).get("zone3") or 0.0) for r in rows]
+def _daily_htl(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Estimated HTL per day: sessions of a day added, capped at 10 like CORE's daily value."""
+    days: dict[str, float] = {}
+    for row in rows:
+        if row.get("date") and row.get("htl_estimate") is not None:
+            days[row["date"]] = days.get(row["date"], 0.0) + row["htl_estimate"]
+    return [{"date": d, "htl_estimate": round(min(v, HTL_MAX), 1)} for d, v in sorted(days.items())]
+
+
+def _effective_sessions(rows: list[dict[str, Any]], end_date: str) -> dict[str, Any]:
+    """Sessions with >= 45 min in Zone 3 (CORE: 45-80 min per session), last one and gaps."""
+    dates = sorted({r["date"] for r in rows
+                    if r.get("date") and ((r.get("zone_minutes") or {}).get("zone3") or 0.0) >= ZONE3_TARGET_MIN})
+    if not dates:
+        return {"effective_sessions": 0}
+    days = [date.fromisoformat(d) for d in dates]
+    gaps = [(b - a).days for a, b in zip(days, days[1:], strict=False)]
     return {
+        "effective_sessions": len(dates),
+        "effective_session_dates": dates,
+        "last_effective_session": dates[-1],
+        "days_since_last_effective_session_at_end_date": (date.fromisoformat(end_date) - days[-1]).days,
+        "longest_gap_days_between_effective_sessions": max(gaps) if gaps else None,
+    }
+
+
+def _summary(rows: list[dict[str, Any]], end_date: str) -> dict[str, Any]:
+    zone3 = [((r.get("zone_minutes") or {}).get("zone3") or 0.0) for r in rows]
+    daily = _daily_htl(rows)
+    return {
+        **_effective_sessions(rows, end_date),
+        "daily_htl_estimate": daily,
+        "days_with_htl_at_least_9": sum(1 for d in daily if d["htl_estimate"] >= 9),
+        "days_with_htl_at_least_5": sum(1 for d in daily if d["htl_estimate"] >= 5),
         "sessions_with_core_data": len(rows),
+        "sessions_hsi_unusable_no_skin_temp": [r["date"] for r in rows if r.get("hsi_unusable_no_skin_temp")],
         "zone3_minutes_total": round(sum(zone3), 1),
         f"sessions_with_zone3_at_least_{ZONE3_TARGET_MIN}_min": sum(1 for z in zone3 if z >= ZONE3_TARGET_MIN),
         "zone4_minutes_total": round(sum(((r.get("zone_minutes") or {}).get("zone4") or 0.0) for r in rows), 1),
@@ -101,9 +138,12 @@ async def _collect(candidates: list[dict[str, Any]], start_date: str, end_date: 
         rows.append(_session_row(workout, analysis, heat))
     result: dict[str, Any] = {
         "date_range": {"start": start_date, "end": end_date},
-        "sessions": rows, "summary": _summary(rows),
+        "sessions": rows, "summary": _summary(rows, end_date),
         "workouts_checked": len(batch), "workouts_without_core_data": without_core,
-        "note": "Values from downsampled time series; use tp_analyze_workout for one session in full detail.",
+        "note": "Values from downsampled time series; use tp_analyze_workout for one session in full detail. "
+                "htl_estimate reads CORE's published Heat Training Load table; the CORE app also uses "
+                "heart rate, so its values can differ. The Heat Adaptation Score is not computed.",
+        "guidance": CORE_GUIDANCE,
     }
     if errors:
         result["errors"] = errors

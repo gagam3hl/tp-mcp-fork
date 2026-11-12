@@ -14,8 +14,11 @@ into what heat-training conversations need:
 - per quarter of the session: core, HSI, heart rate and power or speed, to see
   drift at a given load.
 
-CORE's own Heat Training Load and Heat Adaptation Score use unpublished
-formulas and are not recomputed here.
+CORE's Heat Adaptation Score uses an unpublished formula and is not computed.
+For the Heat Training Load (HTL, 0-10) CORE publishes a table of HTL by time
+held at a given HSI; `heat_training_load_estimate` reads a session against that
+table (see HTL_TABLE). The app additionally uses heart rate, so its value can
+differ — the estimate is labelled as such.
 """
 
 from statistics import median
@@ -32,6 +35,31 @@ SPEED = "Speed"  # km/h (charts metadata unit "kph", checked on real runs and ri
 
 # CORE Heat Zones by Heat Strain Index (upper bounds exclusive, last open)
 HSI_ZONES = ((1, 0.0, 1.0), (2, 1.0, 3.0), (3, 3.0, 7.0), (4, 7.0, None))
+# CORE "Heat Training Load" article: HTL by duration held at a final HSI
+# (assumes 20-40 min to reach it). Column HSI -> [(minutes, HTL), ...].
+HTL_TABLE: dict[float, list[tuple[int, float]]] = {
+    1.5: [(30, 0.6), (45, 0.9), (60, 1.1), (90, 1.3), (120, 1.4), (180, 1.4)],
+    2.5: [(30, 1.4), (45, 2.0), (60, 2.6), (90, 3.8), (120, 4.9), (180, 7.3)],
+    3.5: [(30, 4.0), (45, 5.6), (60, 7.3), (90, 10.0)],
+    4.5: [(30, 5.1), (45, 7.0), (60, 8.8), (90, 10.0)],
+    5.5: [(30, 5.9), (45, 7.9), (60, 9.8), (90, 10.0)],
+    6.5: [(30, 6.3), (45, 8.3), (60, 10.0)],
+}
+HTL_MAX = 10.0
+CORE_GUIDANCE = (
+    "CORE guidance: Zone 1 no heat training; Zone 2 partial adaptation (slower, not the full "
+    "potential); Zone 3 optimal - reach it within 20-40 min, then hold it continuously for 30-80 min "
+    "(45-60 typical); Zone 4 harmful, reduce intensity. Safety: keep core below 39 C, HSI below 7 "
+    "and Zone 3 at most 100 min. Thresholds are individual (some athletes need HSI 5-6). Full "
+    "adaptation: 10-14 sessions with 45-80 min in Zone 3 within 2-12 weeks; daily or every other "
+    "day is fastest, 2-3 per week slower. Maintenance: 1-3 sessions per week. Adaptations decay "
+    "about 2.5 % per day without heat training and are gone after 5-6 weeks. Heat Adaptation Score "
+    "guide: HTL 9-10 on 5-6 days/week -> 85-95 % within about 2 weeks; HTL 5-6 less often -> about "
+    "84 % over 12 weeks; maintained with 1-2 sessions/week."
+)
+SAFE_CORE_C = 39.0
+SAFE_HSI = 7.0
+SAFE_ZONE3_MIN = 100
 CORE_THRESHOLDS_C = (38.0, 38.5, 39.0)
 CORE_RANGE_C = (35.0, 42.5)  # outside: sensor artefact, not a body temperature
 EDGE_S = 300  # start/end values: median of the first/last 5 minutes
@@ -106,13 +134,45 @@ def _hsi_block(rows: list[dict[str, Any]], spacing: float) -> dict[str, Any] | N
         minutes[f"zone{_hsi_zone(h)}"] += spacing / 60
     first_zone3 = next((t for t, h in values if h >= 3.0 and t is not None), None)
     start_t = values[0][0] or 0.0
+    estimate = htl_estimate([h for _, h in values], spacing)
     return {
+        "heat_training_load_estimate": estimate,
+        "htl_basis": "estimate from CORE's published HTL table (time held per HSI level); "
+                     "the CORE app also uses heart rate and may differ",
         "avg": round(sum(h for _, h in values) / len(values), 1),
         "max": round(max(h for _, h in values), 1),
         "minutes_in_zone": {k: round(v, 1) for k, v in minutes.items()},
         "minutes_to_zone3": round((first_zone3 - start_t) / 60, 1) if first_zone3 is not None else None,
         "zones": "CORE Heat Zones by HSI: 1 = 0-0.9, 2 = 1-2.9, 3 = 3-6.9 (heat training zone), 4 = 7+ (avoid)",
+        "guidance": CORE_GUIDANCE,
     }
+
+
+def _table_value(points: list[tuple[int, float]], minutes: float) -> float:
+    """HTL for a duration from one table column: linear from 0 below 30 min, held after the last point."""
+    if minutes <= 0:
+        return 0.0
+    first_min, first_htl = points[0]
+    if minutes <= first_min:
+        return first_htl * minutes / first_min
+    for (m0, h0), (m1, h1) in zip(points, points[1:], strict=False):
+        if minutes <= m1:
+            return h0 + (h1 - h0) * (minutes - m0) / (m1 - m0)
+    return points[-1][1]
+
+
+def htl_estimate(hsi_values: list[float], spacing_s: float) -> float:
+    """Estimated Heat Training Load (0-10) of one session from its HSI samples.
+
+    For each table column (HSI 1.5 ... 6.5) the minutes at or above the column's
+    band (column - 0.5) are read against that column; the highest value wins.
+    Zone 1 (HSI < 1) never contributes.
+    """
+    best = 0.0
+    for column, points in HTL_TABLE.items():
+        minutes = sum(1 for h in hsi_values if h >= column - 0.5) * spacing_s / 60
+        best = max(best, _table_value(points, minutes))
+    return round(min(best, HTL_MAX), 1)
 
 
 def _skin_block(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -143,6 +203,20 @@ def _segments(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def _safety_warnings(summary: dict[str, Any]) -> list[str]:
+    """CORE's safety limits: core below 39 C, HSI below 7, Zone 3 at most 100 min."""
+    warnings = []
+    core_minutes = summary["core_temp_c"]["minutes_at_or_above"].get(f"{SAFE_CORE_C:.1f}", 0.0)
+    if core_minutes > 0:
+        warnings.append(f"core at or above {SAFE_CORE_C:.0f} C for {core_minutes} min")
+    zones = (summary.get("heat_strain_index") or {}).get("minutes_in_zone") or {}
+    if zones.get("zone4", 0.0) > 0:
+        warnings.append(f"HSI {SAFE_HSI:.0f}+ (Zone 4) for {zones['zone4']} min")
+    if zones.get("zone3", 0.0) > SAFE_ZONE3_MIN:
+        warnings.append(f"Zone 3 for {zones['zone3']} min, above CORE's {SAFE_ZONE3_MIN} min maximum")
+    return warnings
+
+
 def heat_summary(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Heat block for tp_analyze_workout, or None without CORE sensor data."""
     core = _core_rows(rows)
@@ -155,11 +229,19 @@ def heat_summary(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
         "sample_spacing_s": round(spacing, 1),
     }
     hsi = _hsi_block(core, spacing)
-    if hsi:
-        summary["heat_strain_index"] = hsi
     skin = _skin_block(core)
     if skin:
         summary["skin_temp_c"] = skin
+    if hsi and not skin:
+        # HSI is computed from core AND skin temperature. Some recordings (e.g. indoor
+        # apps) carry core and HSI but no skin channel; their HSI stays near 0 even
+        # at a core of 38.5+ C. Zones and HTL would then wrongly say "no heat training".
+        hsi = {"avg": hsi["avg"], "max": hsi["max"], "reliable": False,
+               "note": "No skin temperature in this recording, so the Heat Strain Index is not usable "
+                       "(zones and Heat Training Load omitted). Judge the session by core temperature "
+                       "(minutes_at_or_above) or by the CORE app."}
+    if hsi:
+        summary["heat_strain_index"] = hsi
     ambient = _avg(rows, AMBIENT)
     if ambient is not None:
         summary["ambient_temp_c"] = {"avg": ambient, "max": _max(rows, AMBIENT)}
@@ -168,6 +250,9 @@ def heat_summary(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
         summary["core_data_quality"] = {"min": min(quality), "share_at_max_pct": round(
             100 * sum(1 for q in quality if q == max(quality)) / len(quality), 1)}
     summary["by_segment"] = _segments(core)
+    warnings = _safety_warnings(summary)
+    if warnings:
+        summary["safety_warnings"] = warnings
     if spacing > COARSE_SPACING_S:
         summary["note"] = f"Time series is downsampled (~{spacing:.0f} s per point); minutes are approximate."
     return summary

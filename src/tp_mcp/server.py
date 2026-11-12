@@ -666,7 +666,8 @@ TOOLS = [
             "with CORE body-temperature sensor data - core temperature start/avg/max/rise, minutes at "
             "or above 38.5 C, Heat Strain Index avg/max, minutes per CORE Heat Zone (HSI: 1 = 0-0.9, "
             "2 = 1-2.9, 3 = 3-6.9 heat training zone, 4 = 7+ avoid), minutes to Zone 3, skin temperature, "
-            "core-skin gradient, ambient temperature, avg HR, NP - plus totals. Use it for heat-adaptation "
+            "core-skin gradient, ambient temperature, avg HR, NP, an estimated Heat Training Load "
+            "(0-10, from CORE's published table) per session and per day - plus totals. Use it for heat-adaptation "
             "trends across weeks; tp_analyze_workout has the full 'heat' block for one session. Checks up "
             "to 40 workouts per call; if truncated, call again from next_start_date."
         ),

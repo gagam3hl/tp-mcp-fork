@@ -3,11 +3,11 @@
 import pytest
 
 from tp_mcp.tools import heat_sessions
-from tp_mcp.tools.heat import MIN_SAMPLES, heat_summary
+from tp_mcp.tools.heat import MIN_SAMPLES, heat_summary, htl_estimate
 from tp_mcp.tools.heat_sessions import tp_get_heat_sessions
 
 
-def _row(t, core, hsi=None, skin=None, hr=None, power=None, speed=None, ambient=None, quality=20):
+def _row(t, core, hsi=None, skin=33.0, hr=None, power=None, speed=None, ambient=None, quality=20):
     row = {"time": t, "CoreTemperature": core, "CoreDataQuality": quality}
     for key, value in (("HeatStrainIndex", hsi), ("SkinTemperature", skin), ("HeartRate", hr),
                        ("Power", power), ("Speed", speed), ("Temperature", ambient)):
@@ -117,8 +117,13 @@ async def test_sessions_rows_and_summary(fake_api):
     row = result["sessions"][0]
     assert row["date"] == "2026-08-01" and row["hr_avg"] == 141.0 and row["np_w"] == 230.0
     assert row["zone_minutes"]["zone3"] == 50.0 and row["core_max_c"] == 38.6
-    assert result["summary"] == {"sessions_with_core_data": 1, "zone3_minutes_total": 50.0,
-                                 "sessions_with_zone3_at_least_45_min": 1, "zone4_minutes_total": 0.0}
+    summary = result["summary"]
+    assert summary["sessions_with_core_data"] == 1 and summary["zone3_minutes_total"] == 50.0
+    assert summary["sessions_with_zone3_at_least_45_min"] == 1 and summary["zone4_minutes_total"] == 0.0
+    assert summary["daily_htl_estimate"] == [{"date": "2026-08-01", "htl_estimate": row["htl_estimate"]}]
+    assert row["htl_estimate"] == 7.6  # 50 min at HSI 4.0 -> column 4.5: 7.0 + (8.8 - 7.0) * 5 / 15
+    assert summary["effective_sessions"] == 1 and summary["last_effective_session"] == "2026-08-01"
+    assert summary["days_since_last_effective_session_at_end_date"] == 6
     assert result["workouts_without_core_data"] == 1 and "truncated" not in result
 
 
@@ -142,3 +147,72 @@ async def test_analysis_error_is_listed_not_fatal(fake_api):
 async def test_invalid_range(fake_api, start, end):
     result = await tp_get_heat_sessions(start, end)
     assert result["isError"] and result["error_code"] == "VALIDATION_ERROR" and fake_api["analyze"] == []
+
+
+# --- Heat Training Load estimate (CORE table)
+
+def _hsi_session(levels):
+    values = []
+    for minutes, hsi in levels:
+        values += [hsi] * (minutes * 60)
+    return htl_estimate(values, 1.0)
+
+
+@pytest.mark.parametrize("levels, expected", [
+    ([(60, 4.5)], 8.8), ([(30, 3.5)], 4.0), ([(45, 5.5)], 7.9), ([(60, 6.5)], 10.0),
+    ([(180, 2.5)], 7.3), ([(180, 1.5)], 1.4), ([(180, 0.8)], 0.0), ([(120, 6.0)], 10.0),
+])
+def test_htl_reproduces_core_table(levels, expected):
+    assert _hsi_session(levels) == expected
+
+
+def test_htl_close_to_core_examples():
+    ramp = [(5, 0.5), (5, 1.5), (10, 2.5), (5, 3.2)]
+    assert abs(_hsi_session(ramp + [(60, 4.5)]) - 8.7) <= 0.3   # CORE example 1a
+    assert abs(_hsi_session([(30, 0.7), (60, 2.3)]) - 2.4) <= 0.3  # CORE example 6
+
+
+def test_daily_htl_adds_sessions_and_caps():
+    rows = [{"date": "2026-08-01", "htl_estimate": 6.0}, {"date": "2026-08-01", "htl_estimate": 5.5},
+            {"date": "2026-08-02", "htl_estimate": 2.0}]
+    assert heat_sessions._daily_htl(rows) == [{"date": "2026-08-01", "htl_estimate": 10.0},
+                                              {"date": "2026-08-02", "htl_estimate": 2.0}]
+
+
+def test_effective_sessions_and_gaps():
+    rows = [{"date": d, "zone_minutes": {"zone3": z}} for d, z in
+            [("2026-08-01", 50), ("2026-08-03", 30), ("2026-08-05", 60), ("2026-08-12", 45)]]
+    eff = heat_sessions._effective_sessions(rows, "2026-08-20")
+    assert eff["effective_session_dates"] == ["2026-08-01", "2026-08-05", "2026-08-12"]
+    assert eff["longest_gap_days_between_effective_sessions"] == 7
+    assert eff["days_since_last_effective_session_at_end_date"] == 8
+    assert heat_sessions._effective_sessions([], "2026-08-20") == {"effective_sessions": 0}
+
+
+def test_safety_warnings():
+    rows = [_row(t, 39.2, hsi=7.5) for t in range(120)] + [_row(120 + t, 38.6, hsi=4.0) for t in range(110 * 60)]
+    warnings = heat_summary(rows)["safety_warnings"]
+    assert any("core at or above 39" in w for w in warnings)
+    assert any("Zone 4" in w for w in warnings) and any("100 min maximum" in w for w in warnings)
+    assert "safety_warnings" not in heat_summary([_row(t, 38.5, hsi=4.0) for t in range(3600)])
+
+
+def test_hsi_without_skin_temperature_is_marked_unusable():
+    # Indoor recording: core 38.6 C, HSI near 0, no skin channel (real case)
+    rows = [_row(t, 38.6, hsi=0.4, skin=None) for t in range(3600)]
+    s = heat_summary(rows)
+    hsi = s["heat_strain_index"]
+    assert hsi["reliable"] is False and "minutes_in_zone" not in hsi and "heat_training_load_estimate" not in hsi
+    assert s["core_temp_c"]["minutes_at_or_above"]["38.5"] == 60.0
+
+
+async def test_sessions_flag_unusable_hsi(fake_api):
+    fake_api["listing"] = _workouts((1, "2026-09-15", 1.5))
+    no_skin = heat_summary([_row(t, 38.6, hsi=0.4, skin=None) for t in range(5400)])
+    fake_api["results"] = {"1": {"totals": {}, "heat": no_skin}}
+    result = await tp_get_heat_sessions("2026-09-15", "2026-09-20")
+    row = result["sessions"][0]
+    assert row["hsi_unusable_no_skin_temp"] is True and "htl_estimate" not in row
+    assert row["core_min_at_or_above_38_0"] == 90.0
+    assert result["summary"]["sessions_hsi_unusable_no_skin_temp"] == ["2026-09-15"]
+    assert result["summary"]["daily_htl_estimate"] == []
