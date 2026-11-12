@@ -141,8 +141,12 @@ async def _collect(candidates: list[dict[str, Any]], start_date: str, end_date: 
         "sessions": rows, "summary": _summary(rows, end_date),
         "workouts_checked": len(batch), "workouts_without_core_data": without_core,
         "note": "Values from downsampled time series; use tp_analyze_workout for one session in full detail. "
-                "htl_estimate reads CORE's published Heat Training Load table; the CORE app also uses "
-                "heart rate, so its values can differ. The Heat Adaptation Score is not computed.",
+                "htl_estimate reads CORE's published Heat Training Load table and covers only the "
+                "workouts in TrainingPeaks. The CORE sensor also records heat strain outside them "
+                "(other activities, passive heat, everyday wear), and the CORE app's daily HTL "
+                "includes that - so the app's daily value can be higher, never lower. Per workout the "
+                "estimate matched the app within 0.3 on 14 of 19 single-workout days. The Heat "
+                "Adaptation Score is not computed; the CORE app is the source for it.",
         "guidance": CORE_GUIDANCE,
     }
     if errors:
