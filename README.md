@@ -7,8 +7,8 @@
 
 ## Unterschiede zum Original
 
-Alle 85 Werkzeuge heißen gleich, neue Parameter sind optional, ohne sie ist die Ausgabe des
-Originals unverändert — außer den neuen Feldern in der Tabelle.
+Alle Werkzeuge des Originals heißen gleich, dazu kommt `tp_complete_workout`. Neue Parameter sind
+optional, ohne sie ist die Ausgabe des Originals unverändert — außer den neuen Feldern in der Tabelle.
 
 | Werkzeug | Unterschied | Quelle |
 |---|---|---|
@@ -19,6 +19,10 @@ Originals unverändert — außer den neuen Feldern in der Tabelle.
 | `tp_get_workout` | Neue Felder `coach_comment` (Pre-Activity Comments) und `athlete_comment` (Post-Activity Comments). | [#178](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/178) |
 | `tp_get_workout` | Neuer Parameter `timezone` (IANA, z. B. `Europe/Berlin`): `uploaded_at_local` je Datei (TrainingPeaks liefert `uploaded_at` in America/Denver ohne Offset). | [#190](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/190) |
 | `tp_analyze_workout` | Neuer Parameter `timezone`: `startTimestamp_local` / `stopTimestamp_local` (Original: UTC ohne Offset). | [#190](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/190) |
+| `tp_update_workout` | Neuer Parameter `description_mode: "append"`: Text unter die bestehende Beschreibung setzen statt sie zu ersetzen. | [#191](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/191) |
+| `tp_complete_workout` (neu) | Geplante Einheit ohne Gerätedatei als erledigt markieren (Mobility, Kraft …); ohne Angaben werden Plan-Dauer, -Distanz und -TSS als Ist übernommen, optional eigene Werte, RPE, Gefühl. | [#168](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/168) |
+| `tp_update_hr_zones` | Ändert gezielt den HF-Zonensatz einer Sportart (general/swim/bike/run); fehlt der Satz, kommt `ZONES_MISSING` statt eines stillen Schreibens in den allgemeinen Satz. | [#187](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/187) |
+| `tp_create_workout`, `tp_update_workout`, `tp_validate_structure` | Falsch geformte Intervall-Strukturen (z. B. das Format aus `tp_get_workout`) ergeben eine klare Fehlermeldung mit dem erwarteten Format statt „An internal error occurred“. | [#188](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/188) |
 | `tp_get_metrics` | Neuer Parameter `compact: true`: eine Zeile je Tag, je Kennzahl eine Spalte (`hrv`, `pulse`, `sleep_hours`, `weight`, …) plus `labels`. | [#189](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/189) |
 | `tp_auth_status`, `tp_refresh_auth`, `tp-mcp auth` | Abgelaufenes Cookie (`{"success": false, "token": null}`) wird als abgelaufen bzw. ungültig gemeldet statt mit `AttributeError` abzustürzen ([#181](https://github.com/JamsusMaximus/trainingpeaks-mcp/issues/181)). | [#182](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/182) |
 

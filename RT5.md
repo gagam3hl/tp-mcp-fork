@@ -11,9 +11,13 @@ plus ausgewählte, noch nicht gemergte PRs.
 | #199 | Compliance (Plan-Ist in %, Kalenderfarbe) in `tp_get_workouts`/`tp_get_workout` |
 | #189 | `compact: true` für `tp_get_workouts` und `tp_get_metrics` |
 | #190 | `timezone` für lokale Zeitstempel in `tp_get_workout`/`tp_analyze_workout` |
+| #187 | HF-Zonen gezielt je Sportart, `ZONES_MISSING` statt stillem Schreiben in den allgemeinen Satz |
+| #188 | klare Fehlermeldung bei falsch geformten Intervall-Strukturen |
+| #191 | `description_mode: "append"` für `tp_update_workout` |
+| #168 | neues Werkzeug `tp_complete_workout` (erledigt ohne Gerätedatei) |
 
 Eigene Anpassungen: kompakte Zeilen tragen `compliance_color`/`_basis`/`_percent`
-(#189 + #199); Tests der PRs an die Kombination angepasst.
+(#189 + #199); Tests der PRs an die Kombination angepasst (auch #191 mit #188/#189/#190).
 
 Jeder PR wurde vor dem Merge gelesen (keine neuen Netzwerkziele, Dateizugriffe
 oder Ausgaben von Tokens). Neue Stände des Originals: `main` synchronisieren,
