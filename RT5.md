@@ -15,6 +15,7 @@ plus ausgewählte, noch nicht gemergte PRs.
 | #188 | klare Fehlermeldung bei falsch geformten Intervall-Strukturen |
 | #191 | `description_mode: "append"` für `tp_update_workout` |
 | #168 | neues Werkzeug `tp_complete_workout` (erledigt ohne Gerätedatei) |
+| #185 | neues Werkzeug `tp_analyze_power_balance` — **umgebaut**: `workout_ids` statt `file_paths`, Datei aus TrainingPeaks im Speicher statt von der Platte (#194); neue Abhängigkeit `fitparse` |
 
 Eigene Anpassungen: kompakte Zeilen tragen `compliance_color`/`_basis`/`_percent`
 (#189 + #199); Tests der PRs an die Kombination angepasst (auch #191 mit #188/#189/#190).
