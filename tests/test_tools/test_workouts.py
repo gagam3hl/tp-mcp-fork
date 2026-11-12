@@ -962,6 +962,7 @@ class TestTpGetWorkoutsCompact:
             "id", "date", "sport", "type", "title", "duration_planned", "duration_actual",
             "distance_planned_km", "distance_actual_km", "tss_planned", "tss_actual",
             "has_description", "has_structure", "file_count",
+            "compliance_color", "compliance_basis", "compliance_percent",  # #199 im Fork rt5
         }
         assert "description" not in completed
         assert completed["id"] == "1001"
@@ -1002,6 +1003,7 @@ class TestTpGetWorkoutsCompact:
         assert set(first) == {
             "id", "date", "title", "type", "sport", "duration_planned", "duration_actual",
             "distance_planned_km", "distance_actual_km", "tss", "tss_planned", "tss_actual", "description",
+            "compliance",  # #199 im Fork rt5
         }
 
     @pytest.mark.asyncio
@@ -1076,3 +1078,19 @@ class TestTpGetWorkoutTimezone:
         assert result["error_code"] == "VALIDATION_ERROR"
         assert "Mars/Olympus_Mons" in result["message"]
         mock_client.assert_not_called()
+
+
+class TestCompactCompliance:
+    """Compact rows carry the compliance colour, basis and percentage (fork rt5: #189 + #199)."""
+
+    @pytest.mark.asyncio
+    async def test_compact_row_has_flat_compliance(self):
+        rows = [{"workoutId": 1, "workoutDay": "2020-01-02T00:00:00", "tssPlanned": 6.0, "tssActual": 3.95,
+                 "totalTime": 0.1, "complianceTssPercent": 65.8}]
+        with patch("tp_mcp.tools.workouts.TPClient") as mock_client:
+            inst = AsyncMock()
+            inst.ensure_athlete_id = AsyncMock(return_value=123)
+            inst.get = AsyncMock(return_value=APIResponse(success=True, data=rows))
+            mock_client.return_value.__aenter__.return_value = inst
+            row = (await tp_get_workouts("2020-01-01", "2020-01-31", compact=True))["workouts"][0]
+        assert (row["compliance_color"], row["compliance_basis"], row["compliance_percent"]) == ("yellow", "tss", 65.8)

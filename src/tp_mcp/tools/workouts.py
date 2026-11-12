@@ -281,7 +281,10 @@ def _compact_workout(w: Any, raw: dict[str, Any], compliance: dict[str, Any] | N
         "has_description": bool(w.description),
         "has_structure": bool(raw.get("structure")),
         "file_count": _file_count(raw),
-        "compliance": compliance,
+        # Kompakt nur Farbe, Basis und deren Prozentwert — das volle Objekt hat tp_get_workout
+        "compliance_color": (compliance or {}).get("color"),
+        "compliance_basis": (compliance or {}).get("basis"),
+        "compliance_percent": ((compliance or {}).get("percent") or {}).get((compliance or {}).get("basis") or ""),
     }
 
 
