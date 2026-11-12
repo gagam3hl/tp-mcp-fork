@@ -1,5 +1,19 @@
 # TrainingPeaks MCP Server
 
+> **Fork von [JamsusMaximus/trainingpeaks-mcp](https://github.com/JamsusMaximus/trainingpeaks-mcp).**
+> Branch `rt5` (Standard) = Original plus geprüfte, dort noch offene PRs:
+> [#182](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/182) abgelaufenes Cookie ohne Absturz,
+> [#178](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/178) Kommentare vor/nach der Einheit,
+> [#199](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/199) Plan-Ist-Compliance in % und Kalenderfarbe,
+> [#189](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/189) kompakte Ausgabe,
+> [#190](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/190) Zeitzonen.
+> `main` spiegelt das Original unverändert. Inhalt, eigene Anpassungen und Ablauf für
+> neue Stände: [RT5.md](RT5.md). Genutzt von
+> [gagam3hl/TrainingPeaks-MCP](https://github.com/gagam3hl/TrainingPeaks-MCP) (privat):
+> gehosteter Connector hinter Cloudflare Access, ein Prozess je TrainingPeaks-Konto.
+> Ab hier folgt die README des Originals; Installationsbefehle zeigen auf das Original —
+> für diesen Stand `git clone -b rt5 https://github.com/gagam3hl/tp-mcp-fork.git`.
+
 <a href="https://glama.ai/mcp/servers/@JamsusMaximus/TrainingPeaks-MCP">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@JamsusMaximus/TrainingPeaks-MCP/badge" alt="TrainingPeaks MCP server" />
 </a>
