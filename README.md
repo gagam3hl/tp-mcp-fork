@@ -88,6 +88,7 @@ null comments are returned as `null`, and empty strings are preserved.
 | Tool | Description |
 |------|-------------|
 | `tp_analyze_workout` | Detailed analysis with time-series data, zones, and laps (`startTimestamp`/`stopTimestamp` are UTC; optional `timezone` adds `*_local` with offset) |
+| `tp_analyze_power_balance` | Left/right power balance by watt bucket from the workouts' device FIT files (fetched from TrainingPeaks, analysed in memory) |
 | `tp_get_peaks` | Power PRs (5s-90min) and running PRs (400m-marathon) |
 | `tp_get_workout_prs` | PRs set during a specific session |
 | `tp_get_fitness` | CTL, ATL, and TSB trend (fitness, fatigue, form) |
