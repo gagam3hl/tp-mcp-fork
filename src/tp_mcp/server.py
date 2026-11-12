@@ -31,7 +31,6 @@ from tp_mcp.tools import (
     tp_add_athletes_to_group,
     tp_add_note_comment,
     tp_add_workout_comment,
-    tp_analyze_power_balance,
     tp_analyze_workout,
     tp_apply_training_plan,
     tp_auth_status,
@@ -578,31 +577,6 @@ TOOLS = [
         },
     ),
     # --- Analysis & Peaks ---
-    Tool(
-        name="tp_analyze_power_balance",
-        description=(
-            "Analyze left/right power balance by total-power bucket from the device files of one or more "
-            "workouts (needs a dual-sided power meter). Pass workout IDs from tp_get_workouts; each "
-            "workout's device FIT file is fetched from TrainingPeaks and analysed in memory. Multiple "
-            "workouts are combined (max 20)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "workout_ids": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Workout IDs whose device files to analyze (max 20).",
-                },
-                "bucket_size": {"type": "integer", "description": "Watts per bucket (default 50)."},
-                "sample_seconds": {
-                    "type": "integer",
-                    "description": "Seconds per data point; adds durations to output.",
-                },
-            },
-            "required": ["workout_ids"],
-        },
-    ),
     Tool(
         name="tp_get_workout_prs",
         description=(
@@ -1881,14 +1855,6 @@ async def _h_get_prs(args): return await tp_get_workout_prs(workout_id=args["wor
 @_handler("tp_get_peaks")
 async def _h_get_peaks(args):
     return await tp_get_peaks(sport=args["sport"], pr_type=args["pr_type"], days=args.get("days", 3650))
-
-@_handler("tp_analyze_power_balance")
-async def _h_analyze_power_balance(args):
-    return await tp_analyze_power_balance(
-        workout_ids=args["workout_ids"],
-        bucket_size=args.get("bucket_size", 50),
-        sample_seconds=args.get("sample_seconds"),
-    )
 
 @_handler("tp_analyze_workout")
 async def _h_analyze(args):

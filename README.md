@@ -7,7 +7,7 @@
 
 ## Unterschiede zum Original
 
-Alle Werkzeuge des Originals heißen gleich, dazu kommen `tp_complete_workout` und `tp_analyze_power_balance`. Neue Parameter sind
+Alle Werkzeuge des Originals heißen gleich, dazu kommt `tp_complete_workout`. Neue Parameter sind
 optional, ohne sie ist die Ausgabe des Originals unverändert — außer den neuen Feldern in der Tabelle.
 
 | Werkzeug | Unterschied | Quelle |
@@ -23,7 +23,6 @@ optional, ohne sie ist die Ausgabe des Originals unverändert — außer den neu
 | `tp_complete_workout` (neu) | Geplante Einheit ohne Gerätedatei als erledigt markieren (Mobility, Kraft …); ohne Angaben werden Plan-Dauer, -Distanz und -TSS als Ist übernommen, optional eigene Werte, RPE, Gefühl. | [#168](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/168) |
 | `tp_update_hr_zones` | Ändert gezielt den HF-Zonensatz einer Sportart (general/swim/bike/run); fehlt der Satz, kommt `ZONES_MISSING` statt eines stillen Schreibens in den allgemeinen Satz. | [#187](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/187) |
 | `tp_create_workout`, `tp_update_workout`, `tp_validate_structure` | Falsch geformte Intervall-Strukturen (z. B. das Format aus `tp_get_workout`) ergeben eine klare Fehlermeldung mit dem erwarteten Format statt „An internal error occurred“. | [#188](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/188) |
-| `tp_analyze_power_balance` (neu) | Links-rechts-Balance je Wattbereich aus den Gerätedateien (beidseitiger Powermeter nötig). **Abweichend von #185** nimmt es `workout_ids` statt `file_paths`: Die FIT-Datei wird aus TrainingPeaks geladen und im Speicher ausgewertet, lokale Dateien liest der Server nie (#194). Neue Abhängigkeit `fitparse`. | [#185](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/185) + eigene Anpassung |
 | `tp_get_metrics` | Neuer Parameter `compact: true`: eine Zeile je Tag, je Kennzahl eine Spalte (`hrv`, `pulse`, `sleep_hours`, `weight`, …) plus `labels`. | [#189](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/189) |
 | `tp_auth_status`, `tp_refresh_auth`, `tp-mcp auth` | Abgelaufenes Cookie (`{"success": false, "token": null}`) wird als abgelaufen bzw. ungültig gemeldet statt mit `AttributeError` abzustürzen ([#181](https://github.com/JamsusMaximus/trainingpeaks-mcp/issues/181)). | [#182](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/182) |
 
@@ -89,7 +88,6 @@ null comments are returned as `null`, and empty strings are preserved.
 | Tool | Description |
 |------|-------------|
 | `tp_analyze_workout` | Detailed analysis with time-series data, zones, and laps (`startTimestamp`/`stopTimestamp` are UTC; optional `timezone` adds `*_local` with offset) |
-| `tp_analyze_power_balance` | Left/right power balance by watt bucket from the workouts' device FIT files (fetched from TrainingPeaks, analysed in memory) |
 | `tp_get_peaks` | Power PRs (5s-90min) and running PRs (400m-marathon) |
 | `tp_get_workout_prs` | PRs set during a specific session |
 | `tp_get_fitness` | CTL, ATL, and TSB trend (fitness, fatigue, form) |
