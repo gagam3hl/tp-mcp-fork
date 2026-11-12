@@ -15,6 +15,11 @@ plus ausgewählte, noch nicht gemergte PRs.
 | #188 | klare Fehlermeldung bei falsch geformten Intervall-Strukturen |
 | #191 | `description_mode: "append"` für `tp_update_workout` |
 | #168 | neues Werkzeug `tp_complete_workout` (erledigt ohne Gerätedatei) |
+| #165 | Zeitreihe von `tp_analyze_workout` in voller Auflösung (abschnittsweise nachgeladen) |
+
+Eigene Erweiterungen: Block `pedaling` in `tp_analyze_workout` (Balance, Drehmomenteffektivität,
+Tretrundheit, Balance je Wattbereich und je Viertel) statt #185, das nicht übernommen wird;
+`TP_MCP_NO_ANALYSIS_FILE=1` gegen große Zeitreihen-Dateien.
 
 Eigene Anpassungen: kompakte Zeilen tragen `compliance_color`/`_basis`/`_percent`
 (#189 + #199); Tests der PRs an die Kombination angepasst (auch #191 mit #188/#189/#190).
