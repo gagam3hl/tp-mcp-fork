@@ -581,17 +581,18 @@ TOOLS = [
     Tool(
         name="tp_analyze_power_balance",
         description=(
-            "Analyze left/right power balance by total-power bucket from downloaded .fit.gz files (offline; needs a "
-            "dual-sided power meter). Workflow: tp_get_workouts -> tp_get_workout (device_files) -> "
-            "tp_download_workout_file -> pass saved_to paths here. Multiple paths are combined."
+            "Analyze left/right power balance by total-power bucket from the device files of one or more "
+            "workouts (needs a dual-sided power meter). Pass workout IDs from tp_get_workouts; each "
+            "workout's device FIT file is fetched from TrainingPeaks and analysed in memory. Multiple "
+            "workouts are combined (max 20)."
         ),
         input_schema={
             "type": "object",
             "properties": {
-                "file_paths": {
+                "workout_ids": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "saved_to paths from tp_download_workout_file.",
+                    "description": "Workout IDs whose device files to analyze (max 20).",
                 },
                 "bucket_size": {"type": "integer", "description": "Watts per bucket (default 50)."},
                 "sample_seconds": {
@@ -599,7 +600,7 @@ TOOLS = [
                     "description": "Seconds per data point; adds durations to output.",
                 },
             },
-            "required": ["file_paths"],
+            "required": ["workout_ids"],
         },
     ),
     Tool(
@@ -1604,8 +1605,6 @@ _ATHLETE_EXEMPT_TOOLS = {
     "tp_get_zone_methods",
     # Offline exercise-library search — not athlete-scoped.
     "tp_search_exercises",
-    # Offline analysis of local files — not athlete-scoped.
-    "tp_analyze_power_balance",
     # Coach-scoped (groups belong to the coach, not a targeted athlete).
     "tp_list_groups", "tp_list_athletes_in_group",
     "tp_create_group", "tp_rename_group", "tp_delete_group",
@@ -1886,7 +1885,7 @@ async def _h_get_peaks(args):
 @_handler("tp_analyze_power_balance")
 async def _h_analyze_power_balance(args):
     return await tp_analyze_power_balance(
-        file_paths=args["file_paths"],
+        workout_ids=args["workout_ids"],
         bucket_size=args.get("bucket_size", 50),
         sample_seconds=args.get("sample_seconds"),
     )

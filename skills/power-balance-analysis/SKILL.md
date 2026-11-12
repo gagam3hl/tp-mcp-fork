@@ -9,15 +9,15 @@ Requires a dual-sided power meter (workouts without L/R balance data return no b
 
 ## Steps
 
-1. **Find workouts**: `tp_get_workouts` with a date range. Pick the cycling workouts that have a device file.
-2. **Find the file ID**: `tp_get_workout` for each workout; read `device_files` and take the `file_id` of the FIT file.
-3. **Download**: `tp_download_workout_file` with `workout_id` and `file_id`. The file is saved as `.fit.gz`; keep the `saved_to` path.
-4. **Analyze**: `tp_analyze_power_balance` with `file_paths` (all `saved_to` paths) and optional:
+1. **Find workouts**: `tp_get_workouts` with a date range. Pick the cycling workouts (they need a device file).
+2. **Analyze**: `tp_analyze_power_balance` with `workout_ids` (up to 20) and optional:
    - `bucket_size` (watts per bucket, default 50; use 10-25 for fine detail around a target wattage)
    - `sample_seconds` (seconds per data point, typically 1; adds durations)
-5. **Report**: use the `buckets` rows (`left_pct`, `right_pct`, `datapoints`, `duration`) or the ready-made `text` table.
+   The tool fetches each workout's device FIT file from TrainingPeaks and analyses it in memory;
+   workouts without a device file are listed under `skipped_workouts`.
+3. **Report**: use the `buckets` rows (`left_pct`, `right_pct`, `datapoints`, `duration`) or the ready-made `text` table.
 
-Passing several paths in one call combines them into a single bucketed result (cross-workout analysis).
+Passing several workout IDs in one call combines them into a single bucketed result (cross-workout analysis).
 
 ## Interpreting results
 
@@ -30,7 +30,7 @@ Passing several paths in one call combines them into a single bucketed result (c
 
 Offline helpers live in `src/tp_mcp/fit/`:
 
-- `parser.py`: `load_workout`, `flatten_workouts`, `WorkoutDataPoint`, `decode_left_right_balance`
+- `parser.py`: `load_workout_bytes` (FIT bytes, plain or gzipped — never local paths), `flatten_workouts`, `WorkoutDataPoint`, `decode_left_right_balance`
 - `power_balance.py`: `bucket_left_right_power`, `summarize_power_buckets`, `format_power_buckets`
 
 Add new FIT analyses (cadence, HR by power, etc.) as new modules there on top of `WorkoutDataPoint`, with a thin tool in `src/tp_mcp/tools/`.
