@@ -1,16 +1,32 @@
 # TrainingPeaks MCP Server
 
 > **Fork von [JamsusMaximus/trainingpeaks-mcp](https://github.com/JamsusMaximus/trainingpeaks-mcp).**
-> Branch `rt5` (Standard) = Original plus geprüfte, dort noch offene PRs:
-> [#182](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/182) abgelaufenes Cookie ohne Absturz,
-> [#178](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/178) Kommentare vor/nach der Einheit,
-> [#199](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/199) Plan-Ist-Compliance in % und Kalenderfarbe,
-> [#189](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/189) kompakte Ausgabe,
-> [#190](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/190) Zeitzonen.
-> `main` spiegelt das Original unverändert. Inhalt, eigene Anpassungen und Ablauf für
-> neue Stände: [RT5.md](RT5.md).
-> Ab hier folgt die README des Originals; Installationsbefehle zeigen auf das Original —
-> für diesen Stand `git clone -b rt5 https://github.com/gagam3hl/tp-mcp-fork.git`.
+> Branch `rt5` (Standard) = Original plus geprüfte, dort noch offene PRs; `main` spiegelt das
+> Original unverändert. Ablauf für neue Stände: [RT5.md](RT5.md). Installieren:
+> `git clone -b rt5 https://github.com/gagam3hl/tp-mcp-fork.git` (die Befehle weiter unten zeigen auf das Original).
+
+## Unterschiede zum Original
+
+Alle 85 Werkzeuge heißen gleich, neue Parameter sind optional, ohne sie ist die Ausgabe des
+Originals unverändert — außer den neuen Feldern in der Tabelle.
+
+| Werkzeug | Unterschied | Quelle |
+|---|---|---|
+| `tp_get_workouts` | Neues Feld `compliance` je Einheit: `percent` (TSS, Dauer, Distanz: Ist/Plan in %), `basis` (die Kennzahl, nach der der Kalender färbt), `color` (green 80–120 %, yellow 50–150 %, orange darüber hinaus, red = geplant und ausgelassen, grey = ungeplant; `null` bei abgeschalteter Färbung), `direction` (over/under/on_plan). Reihenfolge und Färbung kommen aus den Kalendereinstellungen des Athleten (ein zusätzlicher API-Aufruf). | [#199](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/199) |
+| `tp_get_workouts` | Neuer Parameter `compact: true`: eine kurze Zeile je Einheit ohne Beschreibungstext (Titel ≤ 80 Zeichen, `has_description`, `has_structure`, `file_count`) — mindestens ein Drittel kleiner. | [#189](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/189) |
+| `tp_get_workouts` | Kompakte Zeilen tragen die Compliance flach als `compliance_color`, `compliance_basis`, `compliance_percent`. | eigene Anpassung (#189 + #199) |
+| `tp_get_workout` | `metrics.compliance` wie oben. | [#199](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/199) |
+| `tp_get_workout` | Neue Felder `coach_comment` (Pre-Activity Comments) und `athlete_comment` (Post-Activity Comments). | [#178](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/178) |
+| `tp_get_workout` | Neuer Parameter `timezone` (IANA, z. B. `Europe/Berlin`): `uploaded_at_local` je Datei (TrainingPeaks liefert `uploaded_at` in America/Denver ohne Offset). | [#190](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/190) |
+| `tp_analyze_workout` | Neuer Parameter `timezone`: `startTimestamp_local` / `stopTimestamp_local` (Original: UTC ohne Offset). | [#190](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/190) |
+| `tp_get_metrics` | Neuer Parameter `compact: true`: eine Zeile je Tag, je Kennzahl eine Spalte (`hrv`, `pulse`, `sleep_hours`, `weight`, …) plus `labels`. | [#189](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/189) |
+| `tp_auth_status`, `tp_refresh_auth`, `tp-mcp auth` | Abgelaufenes Cookie (`{"success": false, "token": null}`) wird als abgelaufen bzw. ungültig gemeldet statt mit `AttributeError` abzustürzen ([#181](https://github.com/JamsusMaximus/trainingpeaks-mcp/issues/181)). | [#182](https://github.com/JamsusMaximus/trainingpeaks-mcp/pull/182) |
+
+Nicht übernommen: alles Übrige, auch der Fix für [#194](https://github.com/JamsusMaximus/trainingpeaks-mcp/issues/194)
+(lokale Dateipfade in `tp_upload_workout_file` / `tp_download_workout_file`) — gibt es noch nicht.
+Wer den Server mit mehreren Personen teilt, sollte `file_path` und `output_path` selbst sperren.
+
+---
 
 <a href="https://glama.ai/mcp/servers/@JamsusMaximus/TrainingPeaks-MCP">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@JamsusMaximus/TrainingPeaks-MCP/badge" alt="TrainingPeaks MCP server" />
