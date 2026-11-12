@@ -611,7 +611,10 @@ TOOLS = [
         description=(
             "Get workout analysis: metrics, zones, laps. Saves full time-series to JSON file. "
             "startTimestamp/stopTimestamp are UTC (no offset); pass timezone to get "
-            "startTimestamp_local/stopTimestamp_local alongside them."
+            "startTimestamp_local/stopTimestamp_local alongside them. With a dual-sided power meter "
+            "the result has a 'pedaling' block: power-weighted left/right balance, torque "
+            "effectiveness and pedal smoothness over pedaling samples, balance by 50 W power range "
+            "and per quarter of the ride (fatigue drift)."
         ),
         input_schema={
             "type": "object",

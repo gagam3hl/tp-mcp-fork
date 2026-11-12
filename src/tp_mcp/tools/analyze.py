@@ -30,6 +30,7 @@ file — legitimately lack per-second/lap data while still having totals).
 
 import json
 import logging
+import os
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -41,6 +42,7 @@ from pydantic import ValidationError
 from tp_mcp.client import TPClient, parse_workout_analysis
 from tp_mcp.tools._time import resolve_timezone, utc_to_local
 from tp_mcp.tools._validation import WorkoutIdInput, format_validation_error
+from tp_mcp.tools.pedaling import pedaling_summary
 
 logger = logging.getLogger("tp-mcp")
 
@@ -401,8 +403,11 @@ async def tp_analyze_workout(workout_id: str, timezone: str | None = None) -> di
             "message": "Failed to parse workout analysis.",
         }
 
-    # Save full raw data (including time-series) to file
-    data_file = _save_analysis_json(wid, raw_data)
+    # Save full raw data (including time-series) to file. rt5: TP_MCP_NO_ANALYSIS_FILE=1
+    # skips it — on a hosted server nobody reads the file, and at 1 s resolution
+    # (#165) a long ride is ~18 MB in a size-limited tmpfs.
+    skip_file = os.environ.get("TP_MCP_NO_ANALYSIS_FILE") == "1"
+    data_file = None if skip_file else _save_analysis_json(wid, raw_data)
 
     # Return summary inline, point to file for full data
     totals_out = {t.name: {"value": t.value, "unit": t.unit} for t in analysis.totals}
@@ -443,4 +448,8 @@ async def tp_analyze_workout(workout_id: str, timezone: str | None = None) -> di
             "data_file": data_file,
         }
     )
+    # rt5: Pedal-Kennzahlen aus der Zeitreihe (nur mit beidseitigem Powermeter)
+    pedaling = pedaling_summary(time_series)
+    if pedaling is not None:
+        result["pedaling"] = pedaling
     return result
